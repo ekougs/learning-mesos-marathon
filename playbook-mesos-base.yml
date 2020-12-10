@@ -1,6 +1,12 @@
 - hosts: localhost
   connection: local
   tasks:
+    - name: Download wait-for-it.sh
+      get_url:
+        url: https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh
+        dest: /usr/local/bin/wait-for-it
+        mode: '0441'
+
     - name: Install the Mesosphere rpm
       shell: rpm -Uvh http://repos.mesosphere.io/el/7/noarch/RPMS/mesosphere-el-repo-7-1.noarch.rpm
 

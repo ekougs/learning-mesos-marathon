@@ -23,7 +23,7 @@ resource "digitalocean_droplet" "mesos-marathon" {
   image  = data.digitalocean_droplet_snapshot.mesos-marathon.id
   name   = "mesos-marathon"
   region = "fra1"
-  size   = "s-1vcpu-1gb"
+  size   = "s-2vcpu-4gb"
   ssh_keys = ["50:3e:72:33:12:b6:8c:2f:ac:fe:b7:7d:01:90:33:24", "a2:57:ce:b6:2a:56:6b:d2:4c:76:4f:49:0d:fd:b4:76"]
 }
 

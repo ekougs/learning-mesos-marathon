@@ -1,16 +1,52 @@
 - hosts: localhost
   connection: local
   tasks:
+    - name: Install the Docker stable repo
+      shell: yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+
+    - name: Install the latest version of Docker
+      yum:
+        name: "{{ packages }}"
+        state: latest
+        disable_gpg_check: yes
+      vars:
+        packages:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+
+    - name: Start the Docker service when the machine starts up
+      file:
+        src: /usr/lib/systemd/system/docker.service
+        dest: /etc/systemd/system/multi-user.target.wants/docker.service
+        state: link
+
     - name: Install the latest version of Marathon
       yum:
         name: marathon
         state: latest
         disable_gpg_check: yes
 
-    - name: Add the zookeeper's address
+    - name: Add the Marathon settings
       blockinfile:
         path: /etc/default/marathon
         block: |
           MARATHON_MASTER=zk://mesos.bytesb8.io:2181/mesos
+          MARATHON_ZK=zk://mesos.bytesb8.io:2181/marathon
           MARATHON_HOSTNAME=marathon.bytesb8.io
+          MARATHON_ACCESS_CONTROL_ALLOW_ORIGIN=http://marathon.bytesb8.io
+          MARATHON_WEBUI_URL=http://marathon.bytesb8.io:8080
+          MARATHON_TASK_LAUNCH_TIMEOUT=600000
+        create: yes
+
+    - name: Add the containerizers
+      lineinfile:
+        line: "docker,mesos"
+        path: /etc/mesos-slave/containerizers
+        create: yes
+
+    - name: Increase the executor registration timeout
+      lineinfile:
+        line: 10mins
+        path: /etc/mesos-slave/executor_registration_timeout
         create: yes

@@ -7,6 +7,12 @@
         dest: /usr/local/bin/wait-for-it
         mode: '0441'
 
+    - name: Install yum-utils
+      yum:
+        name: yum-utils
+        state: latest
+        disable_gpg_check: yes
+
     - name: Install the Mesosphere rpm
       shell: rpm -Uvh http://repos.mesosphere.io/el/7/noarch/RPMS/mesosphere-el-repo-7-1.noarch.rpm
 
@@ -25,6 +31,16 @@
         regexp: "^zk"
         line: zk://mesos.bytesb8.io:2181/mesos
         path: /etc/mesos/zk
+
+    - name: Add the Mesos hostname
+      lineinfile:
+        regexp: "^zk"
+        line: mesos.bytesb8.io
+        path: "/etc/mesos-{{ item }}/hostname"
+        create: yes
+      loop:
+        - master
+        - slave
 
     - name: Add a line for the master to wait for available named Zookeeper
       lineinfile:

@@ -1,32 +1,27 @@
 - hosts: localhost
   connection: local
   tasks:
+    - name: Change mesos-init-settings.sh permissions
+      file:
+        path: /usr/local/bin/mesos-init-settings.sh
+        mode: '0755'
+
     - name: Download wait-for-it.sh
       get_url:
         url: https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh
         dest: /usr/local/bin/wait-for-it
         mode: '0441'
 
-    - name: Install yum-utils
-      yum:
-        name: yum-utils
-        state: latest
-        disable_gpg_check: yes
-
     - name: Install the Mesosphere rpm
       shell: rpm -Uvh http://repos.mesosphere.io/el/7/noarch/RPMS/mesosphere-el-repo-7-1.noarch.rpm
 
     - name: Install the latest version of Mesos
       yum:
-        name: "{{ packages }}"
+        name: mesos
         state: latest
         disable_gpg_check: yes
-      vars:
-        packages:
-          - mesos
-          - mesosphere-zookeeper
 
-    - name: Add the zookeeper's address
+    - name: Add the Zookeeper's address
       lineinfile:
         regexp: "^zk"
         line: zk://mesos.bytesb8.io:2181/mesos
@@ -36,20 +31,5 @@
       lineinfile:
         regexp: "^zk"
         line: mesos.bytesb8.io
-        path: "/etc/mesos-{{ item }}/hostname"
+        path: "/etc/mesos-slave/hostname"
         create: yes
-      loop:
-        - master
-        - slave
-
-    - name: Add a line for the master to wait for available named Zookeeper
-      lineinfile:
-        insertbefore: "ExecStart=/usr/bin/mesos-init-wrapper master"
-        line: ExecStartPre=wait-for-it --timeout=6000 mesos.bytesb8.io:2181
-        path: /etc/systemd/system/multi-user.target.wants/mesos-master.service
-
-    - name: Add a line for the agent to wait for available named Zookeeper
-      lineinfile:
-        insertbefore: "ExecStart=/usr/bin/mesos-init-wrapper slave"
-        line: ExecStartPre=wait-for-it --timeout=6000 mesos.bytesb8.io:2181
-        path: /etc/systemd/system/multi-user.target.wants/mesos-slave.service

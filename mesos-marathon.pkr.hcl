@@ -18,28 +18,47 @@ locals { timestamp = regex_replace(timestamp(), "[- TZ:]", "") }
 # build blocks. A build block runs provisioner and post-processors on a
 # source. Read the documentation for source blocks here:
 # https://www.packer.io/docs/from-1.5/blocks/source
-source "digitalocean" "centos-7-mesos-marathon" {
+source "digitalocean" "centos-7-mesos-marathon-main" {
   image         = "centos-7-x64"
   region        = "fra1"
   size          = "512mb"
-  snapshot_name = "centos-7-mesos-marathon"
+  snapshot_name = "centos-7-mesos-marathon-main"
   ssh_username  = "root"
-  tags          = ["centos-7-x64", "mesos", "marathon"]
+  tags          = ["centos-7-x64", "mesos", "marathon", "main"]
 }
 
-source "docker" "centos-7-mesos-marathon" {
+source "digitalocean" "centos-7-mesos-marathon-agent" {
+  image         = "centos-7-x64"
+  region        = "fra1"
+  size          = "512mb"
+  snapshot_name = "centos-7-mesos-marathon-agent"
+  ssh_username  = "root"
+  tags          = ["centos-7-x64", "mesos", "marathon", "agent"]
+}
+
+source "docker" "centos-7-mesos-marathon-main" {
   image       = "centos:7"
-  export_path = "centos-7-mesos-marathon.tar"
+  export_path = "centos-7-mesos-marathon-main.tar"
+}
+
+source "docker" "centos-7-mesos-marathon-agent" {
+  image       = "centos:7"
+  export_path = "centos-7-mesos-marathon-agent.tar"
 }
 
 # a build block invokes sources and runs provisioning steps on them. The
 # documentation for build blocks can be found here:
 # https://www.packer.io/docs/from-1.5/blocks/build
 build {
-  sources = ["source.digitalocean.centos-7-mesos-marathon", "source.docker.centos-7-mesos-marathon"]
+  sources = ["source.digitalocean.centos-7-mesos-marathon-main", "source.digitalocean.centos-7-mesos-marathon-agent", "source.docker.centos-7-mesos-marathon-main", "source.docker.centos-7-mesos-marathon-agent"]
 
   provisioner "shell" {
     inline = ["yum update -y", "yum install -y epel-release", "yum install -y ansible"]
+  }
+
+  provisioner "file" {
+    source = "mesos-init-settings.sh"
+    destination = "/usr/local/bin/mesos-init-settings.sh"
   }
 
   provisioner "ansible-local" {
@@ -50,9 +69,25 @@ build {
     playbook_file = "playbook-mesos-marathon.yml"
   }
 
+  provisioner "ansible-local" {
+    playbook_file = "playbook-mesos-marathon-main.yml"
+    only       = ["docker.centos-7-mesos-marathon-main", "digitalocean.centos-7-mesos-marathon-main"]
+  }
+
+  provisioner "ansible-local" {
+    playbook_file = "playbook-mesos-marathon-agent.yml"
+    only       = ["docker.centos-7-mesos-marathon-agent", "digitalocean.centos-7-mesos-marathon-agent"]
+  }
+
   post-processor "docker-import" {
     repository = "ekougs/mesos-marathon"
     tag        = "0.1"
-    only       = ["docker.centos-7-mesos-marathon"]
+    only       = ["docker.centos-7-mesos-marathon-main"]
+  }
+
+  post-processor "docker-import" {
+    repository = "ekougs/mesos-marathon-agent"
+    tag        = "0.1"
+    only       = ["docker.centos-7-mesos-marathon-agent"]
   }
 }

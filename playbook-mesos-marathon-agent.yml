@@ -1,0 +1,17 @@
+- hosts: localhost
+  connection: local
+  tasks:
+    - name: Remove the Mesos master and Zookeeper services in the agent
+      file:
+        name: "/etc/systemd/system/multi-user.target.wants/{{ item }}.service"
+        state: absent
+      loop:
+        - mesos-master
+        - zookeeper
+
+    - name: Add the Mesos hostname
+      lineinfile:
+        regexp: "^zk"
+        line: mesos-agent.bytesb8.io
+        path: "/etc/mesos-slave/hostname"
+        create: yes

@@ -1,0 +1,22 @@
+- hosts: localhost
+  connection: local
+  tasks:
+    - name: Install the latest version of Mesosphere Zookeeper
+      yum:
+        name: mesosphere-zookeeper
+        state: latest
+        disable_gpg_check: yes
+
+    - name: Add the Mesos hostname to master
+      lineinfile:
+        regexp: "^zk"
+        line: mesos.bytesb8.io
+        path: "/etc/mesos-master/hostname"
+        create: yes
+
+    - name: Add a line for the master to wait for available named Zookeeper
+      lineinfile:
+        insertbefore: "ExecStart=/usr/bin/mesos-init-wrapper master"
+        # Get the host ip and wait for the domain name to be effective
+        line: ExecStartPre=/usr/local/bin/mesos-init-settings.sh
+        path: /etc/systemd/system/multi-user.target.wants/mesos-master.service
